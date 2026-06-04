@@ -21,6 +21,19 @@ repository's MIT license.</sub>
 letterforms and the distressed texture; Real-ESRGAN (bottom) holds crisp edges and rebuilds the
 grunge detail. This is why upscaled posters keep readable, sharp type instead of mushy lettering.</sub>
 
+## Web app — upscale in your browser, no install
+
+Prefer a GUI? **[Open the web app →](https://mariano215.github.io/ai-image-upscaler/)** — drop in an
+image, pick a target, and upscale entirely in your browser. Nothing is uploaded: the model runs locally
+on your GPU via WebGL (UpscalerJS / TensorFlow.js). Light/dark themes, a before/after compare slider, and
+downloads that carry the chosen DPI. Designed by **Mattei Systems**.
+
+![Mattei Systems Image Lab — in-browser upscaler](assets/gui.png)
+
+> The browser engine is a lightweight ESRGAN model — ideal for quick previews and moderate enlargements.
+> For full Real-ESRGAN x4plus quality or very large print sizes, use the command-line tool below. The web
+> app is a single self-contained file in [`docs/`](docs/index.html).
+
 ## Features
 
 - **Target by inches + DPI** (`--inches 24x36 --dpi 300`) or by **exact pixels** (`--pixels 7200x10800`).

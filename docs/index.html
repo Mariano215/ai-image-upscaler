@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mattei Systems — Image Upscaler</title>
+<meta name="description" content="In-browser AI image upscaling for print. Real-ESRGAN super-resolution, no install. Designed by Mattei Systems." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg stroke='%2330a0e0' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 30 50 60 80 30M20 70V30M80 30v40M50 85V60'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0c0e; --bg-2:#101013; --panel:#161619; --panel-2:#1c1c21;
+  --line:#2a2a31; --line-2:#34343c; --text:#ece9e3; --muted:#9b988f; --faint:#6d6a63;
+  --accent:#19a4dd; --accent-2:#5cc7f2; --accent-ink:#04222e;
+  --danger:#d4775a; --good:#86b88a;
+  --shadow:0 24px 60px -20px rgba(0,0,0,.65);
+  --radius:16px; --radius-sm:10px;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+[data-theme="light"]{
+  --bg:#f2eee5; --bg-2:#ebe5d9; --panel:#fbf9f4; --panel-2:#f2ede2;
+  --line:#ddd5c6; --line-2:#cabfa8; --text:#1b1a16; --muted:#6b665b; --faint:#9a9384;
+  --accent:#0e80b6; --accent-2:#3aa9da; --accent-ink:#eaf8ff;
+  --danger:#b1502f; --good:#4e7a52;
+  --shadow:0 24px 50px -24px rgba(60,48,20,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"Hanken Grotesk",system-ui,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  display:flex; flex-direction:column; min-height:100vh;
+  transition:background .5s ease, color .4s ease;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(1200px 800px at 78% -10%, color-mix(in srgb,var(--accent) 14%,transparent), transparent 60%),
+    radial-gradient(900px 700px at -10% 110%, color-mix(in srgb,var(--accent) 8%,transparent), transparent 55%);
+  opacity:.9; transition:opacity .5s;
+}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:var(--grain);opacity:.035;mix-blend-mode:overlay}
+.wrap{position:relative;z-index:1;width:min(1180px,92vw);margin:0 auto;flex:1 0 auto}
+
+/* ---------- top bar ---------- */
+header{display:flex;align-items:center;justify-content:space-between;padding:30px 0 18px}
+.brand{display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit}
+.brand .mark{display:flex;align-items:center;gap:11px}
+.brand .glyph{width:33px;height:33px;flex:none;display:block;filter:drop-shadow(0 4px 11px color-mix(in srgb,var(--accent) 45%,transparent))}
+.brand .glyph svg{width:100%;height:100%;overflow:visible;display:block}
+.brand .word{font-family:"Hanken Grotesk",sans-serif;font-weight:700;font-size:18px;letter-spacing:.17em;text-transform:uppercase}
+.brand .sub{font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);font-weight:600;padding-left:13px;border-left:1px solid var(--line)}
+.tools{display:flex;align-items:center;gap:10px}
+.ghost{
+  font:inherit;font-size:13px;color:var(--muted);background:transparent;border:1px solid var(--line);
+  padding:9px 14px;border-radius:99px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;
+  text-decoration:none;transition:.2s;
+}
+.ghost:hover{color:var(--text);border-color:var(--line-2);background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.toggle{width:64px;height:34px;border-radius:99px;border:1px solid var(--line);background:var(--panel);position:relative;cursor:pointer;flex:none;transition:.3s}
+.toggle .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;
+  background:linear-gradient(145deg,var(--accent-2),var(--accent));transition:.32s cubic-bezier(.5,1.6,.4,1);
+  display:grid;place-items:center;font-size:13px;color:var(--accent-ink)}
+[data-theme="light"] .toggle .knob{transform:translateX(30px)}
+.toggle .knob::before{content:"☾"}
+[data-theme="light"] .toggle .knob::before{content:"☀"}
+
+/* ---------- hero ---------- */
+.hero{padding:18px 0 30px;max-width:780px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+h1{font-family:"Fraunces",serif;font-weight:300;font-size:clamp(38px,6vw,64px);line-height:1.02;letter-spacing:-.018em}
+h1 em{font-style:italic;font-weight:400;color:var(--accent)}
+.hero p{color:var(--muted);font-size:17px;margin-top:18px;max-width:62ch}
+
+/* ---------- workbench ---------- */
+.board{display:grid;grid-template-columns:1.35fr .9fr;gap:22px;padding-bottom:40px;align-items:start}
+@media(max-width:880px){.board{grid-template-columns:1fr}}
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.panel-pad{padding:20px}
+.label{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-bottom:13px;display:flex;justify-content:space-between;align-items:center}
+
+/* stage / dropzone */
+.stage{position:relative;border-radius:var(--radius);overflow:hidden;background:
+  repeating-conic-gradient(var(--bg-2) 0% 25%, var(--panel) 0% 50%) 50% / 22px 22px;
+  min-height:340px;display:grid;place-items:center}
+.drop{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;cursor:pointer;transition:.25s;z-index:3}
+.drop .ring{width:74px;height:74px;border-radius:20px;border:1.5px dashed var(--line-2);display:grid;place-items:center;margin:0 auto 18px;transition:.3s;color:var(--accent)}
+.drop:hover .ring,.drop.over .ring{border-color:var(--accent);transform:translateY(-3px) rotate(-3deg);box-shadow:0 14px 30px -14px color-mix(in srgb,var(--accent) 60%,transparent)}
+.drop h3{font-family:"Fraunces",serif;font-weight:400;font-size:21px;margin-bottom:6px}
+.drop p{color:var(--muted);font-size:13.5px}
+.drop .pick{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.stage.has-img .drop{background:color-mix(in srgb,var(--bg) 55%,transparent);opacity:0;pointer-events:none}
+.stage.has-img:hover .drop{opacity:0}
+.stage img{display:block;max-width:100%;max-height:560px;width:auto;height:auto;grid-area:1/1}
+/* compare */
+.cmp{position:relative;grid-area:1/1;display:none;width:100%;height:100%}
+.cmp.on{display:block}
+.cmp .layer{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.cmp .after{clip-path:inset(0 0 0 var(--split,50%))}
+.cmp .divider{position:absolute;top:0;bottom:0;left:var(--split,50%);width:2px;background:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent);z-index:4;pointer-events:none}
+.cmp .divider::after{content:"⇆";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:15px;box-shadow:var(--shadow)}
+.cmp input[type=range]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0;z-index:5}
+.tag{position:absolute;top:12px;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;padding:5px 10px;border-radius:99px;background:color-mix(in srgb,var(--bg) 72%,transparent);color:var(--text);backdrop-filter:blur(6px);z-index:4;border:1px solid var(--line)}
+.tag.l{left:12px}.tag.r{right:12px;color:var(--accent)}
+
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:6px 10px}
+.chip b{color:var(--text);font-weight:500}
+
+/* controls */
+.control{margin-bottom:22px}
+.seg{display:flex;background:var(--bg-2);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px}
+.seg button{flex:1;font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);background:transparent;border:0;padding:9px;border-radius:8px;cursor:pointer;transition:.2s}
+.seg button[aria-selected=true]{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:var(--accent-ink);box-shadow:0 4px 12px -6px color-mix(in srgb,var(--accent) 80%,transparent)}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:9px 15px;cursor:pointer;transition:.2s}
+.pill:hover{border-color:var(--line-2);color:var(--text)}
+.pill[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 16%,transparent);border-color:var(--accent);color:var(--text)}
+.fields{display:none;gap:10px;align-items:flex-end}
+.fields.on{display:flex}
+.field{flex:1}
+.field span{display:block;font-size:11px;color:var(--faint);font-family:"JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.field input{width:100%;font:inherit;font-family:"JetBrains Mono",monospace;background:var(--bg-2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px 12px;transition:.2s}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.field .x{align-self:center;color:var(--faint);padding-bottom:11px}
+.readout{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted);margin-top:11px}
+.readout b{color:var(--accent);font-weight:500}
+
+.run{width:100%;font:inherit;font-size:16px;font-weight:700;letter-spacing:.01em;color:var(--accent-ink);
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));border:0;border-radius:12px;padding:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;transition:.25s;box-shadow:0 12px 26px -12px color-mix(in srgb,var(--accent) 75%,transparent)}
+.run:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 18px 34px -14px color-mix(in srgb,var(--accent) 85%,transparent)}
+.run:disabled{opacity:.5;cursor:not-allowed}
+.run .spin{width:16px;height:16px;border:2px solid color-mix(in srgb,var(--accent-ink) 40%,transparent);border-top-color:var(--accent-ink);border-radius:50%;animation:spin .7s linear infinite;display:none}
+.run.busy .spin{display:block}.run.busy .lbl::after{content:"…"}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.status{margin-top:16px;min-height:20px}
+.bar{height:6px;border-radius:99px;background:var(--bg-2);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .25s;position:relative}
+.bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);animation:sh 1.1s linear infinite}
+@keyframes sh{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.status .msg{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);margin-top:9px;display:flex;justify-content:space-between}
+.status .msg.err{color:var(--danger)}
+
+.dl{display:none;gap:10px;margin-top:16px}
+.dl.on{display:flex}
+.dl a{flex:1;text-align:center;font:inherit;font-size:14px;font-weight:600;text-decoration:none;padding:12px;border-radius:10px;cursor:pointer;transition:.2s}
+.dl .primary{color:var(--accent-ink);background:linear-gradient(180deg,var(--accent-2),var(--accent))}
+.dl .primary:hover{transform:translateY(-2px)}
+.dl .secondary{color:var(--text);background:var(--bg-2);border:1px solid var(--line)}
+.dl .secondary:hover{border-color:var(--line-2)}
+
+.note{font-size:12.5px;color:var(--faint);line-height:1.5;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.note b{color:var(--muted);font-weight:600}
+.note a{color:var(--accent);text-decoration:none}.note a:hover{text-decoration:underline}
+
+/* ---------- footer ---------- */
+footer{flex-shrink:0;border-top:1px solid var(--line);margin-top:20px}
+.foot{width:min(1180px,92vw);margin:0 auto;padding:26px 0 40px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.foot .sig{font-family:"Fraunces",serif;font-size:15px;color:var(--muted)}
+.foot .sig b{color:var(--text);font-weight:500}
+.foot .links{display:flex;gap:18px;font-size:13px}
+.foot a{color:var(--muted);text-decoration:none}.foot a:hover{color:var(--accent)}
+.reveal{opacity:0;transform:translateY(14px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.22s}.d4{animation-delay:.32s}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="reveal d1">
+    <a class="brand" href="#" aria-label="Mattei Systems">
+      <span class="mark">
+        <span class="glyph">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs><linearGradient id="msMark" x1="50" y1="0" x2="50" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#7dd2f5"/><stop offset="1" stop-color="#1577cc"/></linearGradient></defs>
+            <path d="M20 30 L50 60 L80 30" stroke="url(#msMark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 70 L20 30 M80 30 L80 70" stroke="url(#msMark)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M20 70 L35 55 M80 70 L65 55" stroke="url(#msMark)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M50 85 L50 60" stroke="url(#msMark)" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="20" cy="30" r="4" fill="url(#msMark)"/><circle cx="50" cy="60" r="4" fill="url(#msMark)"/>
+            <circle cx="80" cy="30" r="4" fill="url(#msMark)"/><circle cx="20" cy="70" r="4" fill="url(#msMark)"/>
+            <circle cx="80" cy="70" r="4" fill="url(#msMark)"/><circle cx="50" cy="85" r="4" fill="url(#msMark)"/>
+            <path d="M50 5 L65 20 L50 35 L35 20 Z" stroke="url(#msMark)" stroke-width="2" opacity="0.6"/>
+            <circle cx="50" cy="5" r="3" fill="url(#msMark)" opacity="0.85"/><circle cx="50" cy="35" r="3" fill="url(#msMark)" opacity="0.85"/>
+            <path d="M10 50 L25 65 L10 80 L-5 65 Z" stroke="url(#msMark)" stroke-width="2" opacity="0.3"/>
+            <path d="M90 50 L105 65 L90 80 L75 65 Z" stroke="url(#msMark)" stroke-width="2" opacity="0.3"/>
+          </svg>
+        </span>
+        <span class="word">Mattei Systems</span>
+      </span>
+      <span class="sub">Image&nbsp;Lab</span>
+    </a>
+    <div class="tools">
+      <a class="ghost" href="https://github.com/Mariano215/ai-image-upscaler" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Source
+      </a>
+      <button class="toggle" id="theme" aria-label="Toggle light/dark"><span class="knob"></span></button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow reveal d1">In-browser · No upload to any server</div>
+    <h1 class="reveal d2">Upscale images <em>for print.</em></h1>
+    <p class="reveal d3">Drop in a small or low-resolution image and enlarge it with AI super-resolution —
+      clean edges and reconstructed detail instead of a blurry stretch. Everything runs locally in your
+      browser; your image never leaves your machine.</p>
+  </section>
+
+  <div class="board">
+    <!-- LEFT: stage -->
+    <div class="panel reveal d3">
+      <div class="panel-pad">
+        <div class="label"><span>Canvas</span><span id="zoomNote"></span></div>
+        <div class="stage" id="stage">
+          <img id="orig" alt="" hidden />
+          <div class="cmp" id="cmp">
+            <div class="layer"><img id="cmpBefore" alt="Before"></div>
+            <div class="layer after"><img id="cmpAfter" alt="After"></div>
+            <span class="tag l">Bicubic</span><span class="tag r">AI · Real-ESRGAN</span>
+            <div class="divider" id="divider"></div>
+            <input type="range" id="split" min="0" max="100" value="50" aria-label="Compare slider">
+          </div>
+          <label class="drop" id="drop" for="file">
+            <input type="file" id="file" accept="image/*" class="visually-hidden">
+            <div class="ring">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Drop an image here</h3>
+            <p>or <span class="pick">browse</span> · PNG, JPG, WEBP</p>
+          </label>
+        </div>
+        <div class="meta" id="meta" hidden>
+          <span class="chip">Source <b id="mSrc">—</b></span>
+          <span class="chip">Target <b id="mTgt">—</b></span>
+          <span class="chip">Scale <b id="mScale">—</b></span>
+          <span class="chip" id="mPrintChip" hidden>Print <b id="mPrint">—</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: controls -->
+    <div class="panel reveal d4">
+      <div class="panel-pad">
+        <div class="control">
+          <div class="label">Target</div>
+          <div class="seg" role="tablist">
+            <button role="tab" aria-selected="true" data-mode="scale">By scale</button>
+            <button role="tab" aria-selected="false" data-mode="print">For print</button>
+          </div>
+          <div style="height:14px"></div>
+          <div class="pills" id="scalePills" data-on="true">
+            <button class="pill" data-scale="2">2×</button>
+            <button class="pill" data-scale="3">3×</button>
+            <button class="pill" aria-pressed="true" data-scale="4">4×</button>
+          </div>
+          <div class="fields" id="printFields">
+            <div class="field"><span>Width in</span><input id="pw" type="number" value="24" min="1" step="0.5"></div>
+            <div class="x">×</div>
+            <div class="field"><span>Height in</span><input id="ph" type="number" value="36" min="1" step="0.5"></div>
+            <div class="field" style="max-width:90px"><span>DPI</span><input id="pdpi" type="number" value="300" min="72" step="1"></div>
+          </div>
+          <div class="readout" id="readout"></div>
+        </div>
+
+        <div class="control">
+          <div class="label">Model quality</div>
+          <div class="pills" id="quality">
+            <button class="pill" data-q="fast">Fast</button>
+            <button class="pill" aria-pressed="true" data-q="balanced">Balanced</button>
+            <button class="pill" data-q="best">Best</button>
+          </div>
+        </div>
+
+        <button class="run" id="run" disabled><span class="spin"></span><span class="lbl">Upscale</span></button>
+
+        <div class="status">
+          <div class="bar" id="barWrap" hidden><i id="bar"></i></div>
+          <div class="msg" id="msg"><span id="msgText">Load an image to begin.</span><span id="msgPct"></span></div>
+        </div>
+
+        <div class="dl" id="dl">
+          <a class="primary" id="dlPng" download>Download PNG</a>
+          <a class="secondary" id="dlJpg" download>JPG</a>
+        </div>
+
+        <p class="note">
+          <b>In-browser engine.</b> Runs a lightweight ESRGAN model (UpscalerJS / TensorFlow.js) on your
+          GPU via WebGL. For very large print jobs or full Real-ESRGAN x4plus quality, use the
+          <a href="https://github.com/Mariano215/ai-image-upscaler" target="_blank" rel="noopener">command-line tool</a>.
+          Downloads carry the chosen DPI so they print at the right physical size.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="foot reveal d4">
+    <div class="sig">Designed by <b>Mattei Systems</b> · est. MMXXVI</div>
+    <div class="links">
+      <a href="https://github.com/Mariano215/ai-image-upscaler" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Mariano215/ai-image-upscaler#readme" target="_blank" rel="noopener">Docs</a>
+      <a href="#" id="footTheme">Theme</a>
+    </div>
+  </div>
+</footer>
+
+<!-- engine: TensorFlow.js + UpscalerJS (UMD, no build step) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" integrity="sha384-vE8hbVJ4lezako5rlvE7bY0BVzWlFhZncPlckrqNwcUQpVtgbENTgZ8TBbnPjZre" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/upscaler@1.0.0-beta.19/dist/browser/umd/upscaler.min.js" integrity="sha384-pZ3l1NgemraExJ0i9RM7LtP5gyzKTP7sUD1IWACiWMT8RkpU9RJVSK4BtAkF+y9Q" crossorigin="anonymous"></script>
+<script>
+/* ---------- theme ---------- */
+const root=document.documentElement;
+const saved=localStorage.getItem("ms-theme"); if(saved) root.dataset.theme=saved;
+function flip(){root.dataset.theme=root.dataset.theme==="dark"?"light":"dark";localStorage.setItem("ms-theme",root.dataset.theme);}
+document.getElementById("theme").onclick=flip;
+document.getElementById("footTheme").onclick=e=>{e.preventDefault();flip();};
+
+/* ---------- state ---------- */
+const S={img:null,sw:0,sh:0,mode:"scale",scale:4,quality:"balanced",resultCanvas:null,busy:false};
+const $=id=>document.getElementById(id);
+
+/* model packages (lazy-loaded UMD bundles by quality) */
+const MV="1.0.0";
+const MODEL_SRC={
+  fast:    `https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-slim@${MV}/dist/umd/models/esrgan-slim/src/x4/index.min.js`,
+  balanced:`https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-medium@${MV}/dist/umd/models/esrgan-medium/src/x4/index.min.js`,
+  best:    `https://cdn.jsdelivr.net/npm/@upscalerjs/esrgan-thick@${MV}/dist/umd/models/esrgan-thick/src/x4/index.min.js`,
+};
+const MODEL_GLOBAL={fast:"ESRGANSlim4x",balanced:"ESRGANMedium4x",best:"ESRGANThick4x"};
+const MODEL_SRI={
+  fast:"sha384-DYTGe938MJpD698SdXwJhHm5SOraccyxoYjDnkoYLw/vlIVXYKX0Iv4bmcqTAzhW",
+  balanced:"sha384-5fJ01HD6+MUDQcTDVhBsqg1yPTfOJb6urBcnZ13EqPInN+9vUsTnoaN56Wlg1x9d",
+  best:"sha384-rAYSGqfG4bNYh9IqbcvA9XEwwz7crDLbICToqCUhWZhfmIsC5haBRwPD1O/31ONT",
+};
+const _loaded={}, _upscalers={};
+function loadScript(src,integrity){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;if(integrity){s.integrity=integrity;s.crossOrigin="anonymous";}s.onload=res;s.onerror=()=>rej(new Error("model failed to load"));document.head.appendChild(s);});}
+async function getUpscaler(q){
+  if(_upscalers[q]) return _upscalers[q];
+  if(!_loaded[q]){ await loadScript(MODEL_SRC[q],MODEL_SRI[q]); _loaded[q]=true; }
+  const model=window[MODEL_GLOBAL[q]];
+  if(!window.Upscaler||!model) throw new Error("engine unavailable");
+  _upscalers[q]=new window.Upscaler({model});
+  return _upscalers[q];
+}
+
+/* ---------- file load ---------- */
+const stage=$("stage"),drop=$("drop"),orig=$("orig");
+$("file").addEventListener("change",e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+;["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+;["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f&&f.type.startsWith("image/"))loadFile(f);});
+
+function loadFile(file){
+  const url=URL.createObjectURL(file);
+  const im=new Image();
+  im.onload=()=>{
+    S.img=im;S.sw=im.naturalWidth;S.sh=im.naturalHeight;S.resultCanvas=null;
+    orig.src=url;orig.hidden=false;stage.classList.add("has-img");
+    $("cmp").classList.remove("on");$("meta").hidden=false;$("dl").classList.remove("on");
+    $("run").disabled=false;
+    setMsg("Ready — choose a target and press Upscale.");setBar(0,true);
+    recompute();
+  };
+  im.src=url;
+}
+
+/* ---------- target math ---------- */
+function targetPx(){
+  if(S.mode==="scale") return [Math.round(S.sw*S.scale),Math.round(S.sh*S.scale)];
+  const w=parseFloat($("pw").value)||0,h=parseFloat($("ph").value)||0,d=parseInt($("pdpi").value)||300;
+  return [Math.round(w*d),Math.round(h*d)];
+}
+function recompute(){
+  if(!S.img)return;
+  const [tw,th]=targetPx();
+  const eff=Math.max(tw/S.sw,th/S.sh);
+  $("mSrc").textContent=`${S.sw}×${S.sh}`;
+  $("mTgt").textContent=`${tw}×${th}`;
+  $("mScale").textContent=`${eff.toFixed(2)}×`;
+  const mp=(tw*th/1e6).toFixed(1);
+  if(S.mode==="print"){
+    const d=parseInt($("pdpi").value)||300;
+    $("mPrintChip").hidden=false;$("mPrint").textContent=`${(tw/d).toFixed(1)}×${(th/d).toFixed(1)}in @ ${d}dpi`;
+    $("readout").innerHTML=`Output <b>${tw}×${th}px</b> · ${mp} MP · effective <b>${eff.toFixed(2)}×</b>`;
+  }else{
+    $("mPrintChip").hidden=true;
+    $("readout").innerHTML=`Output <b>${tw}×${th}px</b> · ${mp} MP`;
+  }
+  if(tw*th>80e6) setMsg("⚠ Large target ("+mp+" MP) — may be slow or hit browser memory. Consider the CLI.",true);
+  else if(!S.busy && S.resultCanvas) setMsg("Done. Drag the divider to compare.");
+  else if(!S.busy) setMsg("Ready — choose a target and press Upscale.");
+}
+
+/* ---------- controls ---------- */
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.seg button').forEach(x=>x.setAttribute("aria-selected",x===b));
+  S.mode=b.dataset.mode;
+  $("scalePills").classList.toggle("on",S.mode==="scale");
+  $("scalePills").style.display=S.mode==="scale"?"flex":"none";
+  $("printFields").classList.toggle("on",S.mode==="print");
+  recompute();
+});
+$("printFields").style.display="none";
+$("scalePills").addEventListener("click",e=>{const b=e.target.closest("[data-scale]");if(!b)return;
+  document.querySelectorAll("#scalePills .pill").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  S.scale=+b.dataset.scale;recompute();});
+$("quality").addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(!b)return;
+  document.querySelectorAll("#quality .pill").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  S.quality=b.dataset.q;});
+["pw","ph","pdpi"].forEach(id=>$(id).addEventListener("input",recompute));
+
+/* ---------- helpers ---------- */
+function setMsg(t,err){const m=$("msg"),x=$("msgText");x.textContent=t;m.classList.toggle("err",!!err);}
+function setBar(p,hide){const w=$("barWrap");w.hidden=!!hide;$("bar").style.width=(p*100).toFixed(0)+"%";$("msgPct").textContent=hide?"":(p*100).toFixed(0)+"%";}
+function bicubic(tw,th){const c=document.createElement("canvas");c.width=tw;c.height=th;const x=c.getContext("2d");x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";x.drawImage(S.img,0,0,tw,th);return c;}
+function resizeCanvas(srcCanvasOrImg,tw,th){const c=document.createElement("canvas");c.width=tw;c.height=th;const x=c.getContext("2d");x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";x.drawImage(srcCanvasOrImg,0,0,tw,th);return c;}
+
+/* ---------- run ---------- */
+$("run").onclick=async()=>{
+  if(!S.img||S.busy)return;
+  const [tw,th]=targetPx();
+  S.busy=true;const btn=$("run");btn.classList.add("busy");btn.disabled=true;
+  setMsg("Loading model…");setBar(0.02,false);
+  try{
+    const up=await getUpscaler(S.quality);
+    setMsg("Upscaling on GPU…");
+    const dataUrl=await up.upscale(S.img,{
+      patchSize:64,padding:4,
+      progress:(rate)=>{setBar(0.05+rate*0.85);setMsg("Upscaling on GPU…");}
+    });
+    setBar(0.93);setMsg("Finishing…");
+    const aiImg=await loadImg(dataUrl);
+    // model outputs native scale; resample to exact requested target
+    S.resultCanvas=resizeCanvas(aiImg,tw,th);
+    // compare layers (fit happens via CSS object-fit)
+    $("cmpBefore").src=bicubic(tw,th).toDataURL("image/png");
+    $("cmpAfter").src=S.resultCanvas.toDataURL("image/png");
+    orig.hidden=true;$("cmp").classList.add("on");
+    prepDownloads(tw,th);
+    setBar(1);setTimeout(()=>setBar(0,true),700);
+    setMsg("Done — drag the divider to compare.");
+    $("dl").classList.add("on");
+  }catch(err){
+    console.error(err);setBar(0,true);
+    setMsg("Engine error: "+err.message+" — try the CLI tool.",true);
+  }finally{S.busy=false;btn.classList.remove("busy");btn.disabled=false;}
+};
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+
+/* ---------- compare slider ---------- */
+$("split").addEventListener("input",e=>{
+  const v=e.target.value;$("cmp").style.setProperty("--split",v+"%");
+});
+$("cmp").style.setProperty("--split","50%");
+
+/* ---------- downloads (PNG with DPI pHYs, JPEG with JFIF density) ---------- */
+function prepDownloads(tw,th){
+  const dpi=S.mode==="print"?(parseInt($("pdpi").value)||300):72;
+  const base=`mattei_${tw}x${th}`;
+  S.resultCanvas.toBlob(b=>b.arrayBuffer().then(buf=>{
+    const png=injectPngDpi(new Uint8Array(buf),dpi);
+    $("dlPng").href=URL.createObjectURL(new Blob([png],{type:"image/png"}));
+    $("dlPng").download=base+".png";
+  }),"image/png");
+  S.resultCanvas.toBlob(b=>b.arrayBuffer().then(buf=>{
+    const jpg=injectJpgDpi(new Uint8Array(buf),dpi);
+    $("dlJpg").href=URL.createObjectURL(new Blob([jpg],{type:"image/jpeg"}));
+    $("dlJpg").download=base+".jpg";
+  }),"image/jpeg",0.95);
+}
+function crc32(buf,start,end){let c=~0;for(let i=start;i<end;i++){c^=buf[i];for(let k=0;k<8;k++)c=(c>>>1)^(0xEDB88320&-(c&1));}return ~c>>>0;}
+function injectPngDpi(png,dpi){
+  const ppm=Math.round(dpi/0.0254);
+  const chunk=new Uint8Array(21);const dv=new DataView(chunk.buffer);
+  dv.setUint32(0,9);chunk.set([0x70,0x48,0x59,0x73],4); // "pHYs"
+  dv.setUint32(8,ppm);dv.setUint32(12,ppm);chunk[16]=1; // unit = meter
+  dv.setUint32(17,crc32(chunk,4,17));
+  // insert after IHDR (first chunk: 8 sig +25 IHDR =33)
+  const at=33;const out=new Uint8Array(png.length+21);
+  out.set(png.subarray(0,at),0);out.set(chunk,at);out.set(png.subarray(at),at+21);
+  return out;
+}
+function injectJpgDpi(jpg,dpi){
+  // set JFIF density (APP0) units=1 (dpi)
+  if(jpg[2]===0xFF&&jpg[3]===0xE0){const dv=new DataView(jpg.buffer);jpg[13]=1;dv.setUint16(14,dpi);dv.setUint16(16,dpi);return jpg;}
+  return jpg;
+}
+
+recompute();
+</script>
+</body>
+</html>
