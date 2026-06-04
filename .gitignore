@@ -1,0 +1,20 @@
+# downloaded model weights (auto-fetched on first run)
+models/
+*.pth
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# generated outputs / proofs
+*_proof.jpg
+*_*x*.tif
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

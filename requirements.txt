@@ -1,0 +1,8 @@
+# Core dependencies.
+# For GPU acceleration, install a CUDA build of torch from https://pytorch.org/get-started/locally/
+# (e.g. pip install torch --index-url https://download.pytorch.org/whl/cu124) before/instead of the
+# generic torch below. CPU-only torch works but is slow on large canvases.
+spandrel>=0.4
+torch>=2.0
+pillow>=10.0
+numpy>=1.24
