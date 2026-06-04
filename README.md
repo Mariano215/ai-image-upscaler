@@ -82,17 +82,34 @@ for illustration/line art. spandrel auto-detects many architectures, so most com
 upscalers can be added with a one-line entry in the `MODELS` dict. See
 [`references/models.md`](references/models.md).
 
-## Use as a Claude Code skill
+## Install as an agent skill (Claude Code & Codex)
 
-This repo is also a Claude Code skill. Install it by cloning into your skills directory:
+This repo is also an [Agent Skill](SKILL.md). The `SKILL.md` format is shared across agents, so the
+same clone works in both **Claude Code** and **OpenAI Codex** — install it by cloning into the tool's
+skills directory. (After cloning, install the deps so the agent can run it: `pip install -r requirements.txt`.)
+
+**Claude Code** — personal skill at `~/.claude/skills/`:
 
 ```bash
 git clone https://github.com/Mariano215/ai-image-upscaler.git ~/.claude/skills/upscale-for-print
 ```
 
-Then just ask Claude things like *"upscale this poster to 24×36 at 300 dpi for print"* and it will
-follow [`SKILL.md`](SKILL.md): inspect the source, pick the best file, check aspect, run the script,
-and verify the output.
+**Codex** — personal skill at `~/.agents/skills/` (skills replaced the now-deprecated custom prompts):
+
+```bash
+git clone https://github.com/Mariano215/ai-image-upscaler.git ~/.agents/skills/upscale-for-print
+```
+
+For a **project-scoped** install instead of personal, clone into `.claude/skills/upscale-for-print`
+(Claude Code) or `.agents/skills/upscale-for-print` (Codex) inside the repo you're working in.
+
+> On Windows, `~` is your user folder (`C:\Users\<you>`). PowerShell and Git Bash expand `~`; plain
+> `cmd.exe` does not, so spell out the full path there.
+
+Once installed, just ask — *"upscale this poster to 24×36 at 300 dpi for print"* — and the agent
+follows [`SKILL.md`](SKILL.md): inspect the source, pick the best file, check aspect, run the script,
+and verify the output. You can also invoke it explicitly: `/upscale-for-print` in Claude Code,
+`$upscale-for-print` in Codex. To update later, `git pull` inside the cloned skill folder.
 
 ## Limitations
 
