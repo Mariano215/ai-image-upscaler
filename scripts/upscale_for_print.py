@@ -21,6 +21,9 @@ import os
 import sys
 import urllib.request
 
+# Let unsupported ops fall back to CPU on Apple Silicon (MPS) instead of erroring out.
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+
 import numpy as np
 import torch
 from PIL import Image, ImageCms
@@ -52,6 +55,18 @@ def resolve_weights(name, models_dir):
         print(f"downloading {name} weights -> {path}")
         urllib.request.urlretrieve(url, path)
     return path
+
+
+def select_device(pref):
+    """Pick a compute device. 'auto' prefers a GPU: CUDA (NVIDIA), then MPS (Apple), else CPU."""
+    if pref != "auto":
+        return pref
+    if torch.cuda.is_available():
+        return "cuda"
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 def load_image(src):
@@ -126,6 +141,8 @@ def main():
     ap.add_argument("--dpi", type=int, default=300, help="dots per inch for --inches (default 300)")
     ap.add_argument("--out", help="output path (default <src>_<W>x<H>.tif next to source)")
     ap.add_argument("--model", default="realesrgan-x4plus", choices=list(MODELS))
+    ap.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto",
+                    help="compute device (default auto: cuda > mps > cpu)")
     ap.add_argument("--models-dir", default=os.path.join(os.path.dirname(__file__), "..", "models"))
     ap.add_argument("--passes", type=int, default=0, help="force N 4x passes (0=auto: enough to reach target)")
     ap.add_argument("--two-pass", action="store_true", help="force >=2 passes for extra crispness")
@@ -164,9 +181,11 @@ def main():
         passes = max(passes, 2)
     passes = min(passes, 3)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = select_device(args.device)
     if device == "cpu":
-        print("WARNING: no CUDA GPU found — running on CPU, this will be slow.")
+        print("WARNING: running on CPU — slow on large canvases. A CUDA or Apple-MPS GPU is much faster.")
+    elif device == "mps":
+        print("NOTE: using Apple MPS (Metal) GPU; unsupported ops fall back to CPU automatically.")
     model = ModelLoader().load_from_file(resolve_weights(args.model, args.models_dir)).to(device).eval()
     scale = model.scale
     print(f"model: {args.model} ({scale}x)  device: {device}  passes: {passes}")

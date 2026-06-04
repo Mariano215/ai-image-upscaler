@@ -32,16 +32,30 @@ grunge detail. This is why upscaled posters keep readable, sharp type instead of
 - **PSD aware**: reads a Photoshop file's merged composite directly (no manual flatten).
 - **Aspect handling**: `--fit cover|contain|stretch` for size mismatches.
 - **Weights auto-download** on first run; swap models with `--model`.
+- **Cross-platform, auto device**: Windows / macOS / Linux; uses CUDA, Apple MPS, or CPU automatically.
 
 ## Requirements
 
-- Python 3.9+
-- `torch` (a CUDA build is strongly recommended — CPU works but is slow on large canvases)
-- `spandrel`, `pillow`, `numpy`
+Runs on **Windows, macOS, and Linux** with Python 3.9+. Dependencies: `torch`, `spandrel`, `pillow`,
+`numpy`.
+
+A virtual environment is recommended (torch is large):
 
 ```bash
+python -m venv .venv
+# Windows (PowerShell):   .venv\Scripts\Activate.ps1
+# macOS / Linux:          source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+**The compute device is auto-detected** — CUDA (NVIDIA) → MPS (Apple Silicon) → CPU — or force it with
+`--device {auto,cuda,mps,cpu}`. A GPU is strongly recommended; CPU works but is slow on large canvases.
+Per platform:
+
+- **NVIDIA GPU**: install a CUDA build of torch from [pytorch.org](https://pytorch.org/get-started/locally/),
+  e.g. `pip install torch --index-url https://download.pytorch.org/whl/cu124`.
+- **Apple Silicon (M-series)**: the default `pip install torch` includes Metal/MPS — nothing extra needed.
+- **CPU-only**: the default torch from PyPI works everywhere; expect long runtimes on big targets.
 
 > **Why spandrel and not the `realesrgan` pip package?** The official package depends on `basicsr`,
 > which is broken on torchvision ≥ 0.17 (`torchvision.transforms.functional_tensor` was removed).
@@ -74,6 +88,7 @@ Output is written next to the source as `<name>_<W>x<H>.tif` (override with `--o
 | `--dpi` | `300` | DPI for `--inches`, and the value tagged into the output |
 | `--out` | `<src>_<W>x<H>.tif` | Output path; `.tif` → LZW, otherwise honors the extension |
 | `--model` | `realesrgan-x4plus` | `realesrgan-x4plus` (photo) or `realesrgan-x4plus-anime` |
+| `--device` | `auto` | `auto` (cuda → mps → cpu), or force `cuda` / `mps` / `cpu` |
 | `--fit` | `cover` | Aspect mismatch: `cover` (fill+crop), `contain` (pad), `stretch` |
 | `--passes` | auto | Force N 4× passes (0 = auto: enough to reach target) |
 | `--two-pass` | off | Force ≥ 2 passes for extra crispness |

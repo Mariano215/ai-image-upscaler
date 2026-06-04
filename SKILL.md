@@ -23,8 +23,10 @@ JPEG proof. Model weights auto-download on first run.
 
 ## Requirements
 
-- Python with: `spandrel`, `torch`, `pillow`, `numpy` (`pip install spandrel torch pillow numpy`).
-  A CUDA GPU is strongly recommended — CPU works but is slow on large canvases.
+- Python with: `spandrel`, `torch`, `pillow`, `numpy` (`pip install spandrel torch pillow numpy`;
+  a venv is recommended since torch is large). Works on Windows / macOS / Linux.
+- The device auto-detects (CUDA → Apple MPS → CPU); override with `--device {auto,cuda,mps,cpu}`.
+  A GPU is strongly recommended — CPU works but is slow on large canvases.
 - `spandrel` is used to run the model weights directly. Do **not** reach for the `realesrgan` pip
   package: it depends on `basicsr`, which is broken on torchvision ≥0.17 (`functional_tensor` was
   removed). `spandrel` avoids that entirely.
