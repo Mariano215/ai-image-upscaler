@@ -228,14 +228,14 @@ footer{flex-shrink:0;border-top:1px solid var(--line);margin-top:20px}
             <div class="divider" id="divider"></div>
             <input type="range" id="split" min="0" max="100" value="50" aria-label="Compare slider">
           </div>
-          <label class="drop" id="drop" for="file">
-            <input type="file" id="file" accept="image/*" class="visually-hidden">
+          <input type="file" id="file" accept="image/*" class="visually-hidden">
+          <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload an image">
             <div class="ring">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round"/></svg>
             </div>
             <h3>Drop an image here</h3>
             <p>or <span class="pick">browse</span> · PNG, JPG, WEBP</p>
-          </label>
+          </div>
         </div>
         <div class="meta" id="meta" hidden>
           <span class="chip">Source <b id="mSrc">—</b></span>
@@ -355,6 +355,8 @@ async function getUpscaler(q){
 /* ---------- file load ---------- */
 const stage=$("stage"),drop=$("drop"),orig=$("orig");
 $("file").addEventListener("change",e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+drop.addEventListener("click",()=>$("file").click());
+drop.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("file").click();}});
 ;["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
 ;["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
 drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f&&f.type.startsWith("image/"))loadFile(f);});
