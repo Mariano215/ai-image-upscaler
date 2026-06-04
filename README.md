@@ -15,6 +15,12 @@ texture, and the brick behind resolve cleanly instead of smearing. Sample art fr
 film poster © 2026 Mariano Mattei, shown for illustration only and **not** covered by this
 repository's MIT license.</sub>
 
+![Before / after on in-image text: bicubic vs Real-ESRGAN](assets/before-after-text.jpg)
+
+<sub>The same on **text inside an image** — the "BROTHERS" title: bicubic (top) softens the
+letterforms and the distressed texture; Real-ESRGAN (bottom) holds crisp edges and rebuilds the
+grunge detail. This is why upscaled posters keep readable, sharp type instead of mushy lettering.</sub>
+
 ## Features
 
 - **Target by inches + DPI** (`--inches 24x36 --dpi 300`) or by **exact pixels** (`--pixels 7200x10800`).
