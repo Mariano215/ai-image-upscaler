@@ -8,6 +8,13 @@ Plain interpolation (Photoshop "Image Size", `PIL.Image.resize`) goes soft past 
 super-resolution model reconstructs clean edges and plausible texture, which is what makes a 5–8×
 enlargement look professional at poster sizes.
 
+![Before / after: bicubic upscale vs Real-ESRGAN super-resolution](assets/before-after.jpg)
+
+<sub>7× enlargement of a face detail — bicubic (left) vs Real-ESRGAN (right): hair strands, skin
+texture, and the brick behind resolve cleanly instead of smearing. Sample art from the *Brothers*
+film poster © 2026 Mariano Mattei, shown for illustration only and **not** covered by this
+repository's MIT license.</sub>
+
 ## Features
 
 - **Target by inches + DPI** (`--inches 24x36 --dpi 300`) or by **exact pixels** (`--pixels 7200x10800`).
